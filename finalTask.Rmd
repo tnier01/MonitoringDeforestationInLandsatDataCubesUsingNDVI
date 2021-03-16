@@ -1,64 +1,114 @@
-# Data for final assignment
+---
+title: "FinalTask"
+author: "Nick Jakuschona, Tom Niers"
+date: "15 3 2021"
+output: html_document
+---
 
-Data can be downloaded from https://uni-muenster.sciebo.de/s/yvFiuWGqG7riliA/download
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-This is a zip file (of 25 Gb: takes quite a while); unpacked it is not much larger, as
-it contains .tif files.
+## 
 
-A script that summarizes the data to 250 m pixels and yearly aggregated (median) NDVI values is:
 
-```{r}
+
+```{r cars}
+#Data Preprocessing
 library(gdalcubes)
 library(magrittr)
 gdalcubes_options(threads=8)
+
 IMAGE_DIR = "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8_cropped" # please change
+
+# database with metadata 
 col = create_image_collection(list.files(IMAGE_DIR, recursive = TRUE, pattern=".tif", full.names  = TRUE), "L8_SR")
-# only use "clear" pixels
+
+# only use "clear" pixels (mask out values not observed, so no data values outside the bounding box)
 L8.clear_mask = image_mask("PIXEL_QA", values=c(322, 386, 834, 898, 1346, 324, 388, 836, 900, 1348), invert = TRUE)
-# example yearly data cube at 250m spatial resolution
-v = cube_view(srs="EPSG:3857", extent=col, dx=250, dy=250, dt="P1M", resampling = "average", aggregation = "median")
-# calculate NDVI and export as GeoTIFF files at subfolder "L8cube"
-raster_cube(col, v, L8.clear_mask) %>%
-  select_bands(c("B04", "B05")) %>%
-  apply_pixel("(B05-B04)/(B05+B04)") %>%
-  write_tif("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2",prefix = "NDVI_")
+
+# example yearly data cube at 250m spatial resolution (dx,dy -> extent; dt -> yearly pictures as output, whereby the pixels of each available picture are used (also jedes Einzelne der in 16Tage Rhytmus verfügbaren) but brought together via resampling and aggregation (aggregation --> bringing a lot of pixels to one final pixel representing these a lot pixels))
+v1m = cube_view(srs="EPSG:3857", extent=col, dx=250, dy=250, dt="P1M", resampling = "average", aggregation = "median")
+
+
+
+
 ```
 
-We can read this with package stars, and visualise as:
-
 ```{r}
-#remotes::install_github("r-spatial/stars")
+# calculate NDVI and export as GeoTIFF files at subfolder "L8cube"
+raster_cube(col, v1m, L8.clear_mask) %>%
+  select_bands(c("B04", "B05")) %>%
+  apply_pixel("(B05-B04)/(B05+B04)") %>%
+  write_tif("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube",prefix = "NDVI_")
+  #
+```
+
+  
+  
+## Including Plots
+
+
+```{r pressure, echo=FALSE}
+remotes::install_github("r-spatial/stars")
 library(stars)
 subdir = "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube"
 f = paste0(subdir, "/", list.files(subdir))
 (st = read_stars(f))
 plot(merge(st))
-plot(merge(st), breaks = "equal")
 ```
 
-To see the raw (non-aggregated) data, with all the cloud gaps, create a
-composite for a sub-region by
+
 ```{r}
-gdalcubes_options(threads=8)
-IMAGE_DIR = "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8_cropped" # please change
-col = create_image_collection(list.files(IMAGE_DIR, recursive = TRUE, pattern=".tif", full.names  = TRUE), "L8_SR")
-# only use "clear" pixels
-L8.clear_mask = image_mask("PIXEL_QA", values=c(322, 386, 834, 898, 1346, 324, 388, 836, 900, 1348), invert = TRUE)
-# example 16 day data cube of a smaller area at 60m spatial resolution
-v = cube_view(srs="EPSG:3857", extent=list(left = -7347259, right = -7314864, top = -995476.1, bottom = -1025490, t0 ="2015-01-01", t1 = "2018-12-31"), dx=60, dy=60, dt = "P16D", resampling = "average", aggregation = "median")
-# calculate NDVI and export as GeoTIFF files at subfolder "L8cube_subregion"
-raster_cube(col, v, L8.clear_mask) %>%
-  select_bands(c("B04", "B05")) %>%
-  apply_pixel("(B05-B04)/(B05+B04)") %>%
-  write_tif("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8_croppedL8cube_subregion",prefix = "NDVI_")
+L8.cube = raster_cube(col, v1m, L8.clear_mask)
+L8.cube = select_bands(L8.cube, c("B04", "B05"))
+L8.ndvi = apply_pixel(L8.cube, "(B05-B04)/(B05+B04)", "NDVI")
+
 ```
 
-And visualise with
 ```{r}
-# remotes::install_github("r-spatial/stars")
-library(stars)
-subdir = "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8_croppedL8cube_subregion"
-f = paste0(subdir, "/", list.files(subdir))
-(st = read_stars(f))
-plot(merge(st))
+list = reduce_space(L8.ndvi, FUN = function(x) {
+    quantile(unlist(apply(x,1,function(x) x[!is.na(x)])), prob=c(0.95))
+  })
+
+array = as_array(list)
+
+```
+
+```{r}
+tri1 = select_time(L8.ndvi, "2016-02")
+times = dimension_values(L8.ndvi)$t
+
+
+L8.filled = fill_time(L8.ndvi, "nocb")
+
+img20186= select_time(L8.filled, "2018-06")
+img20187= select_time(L8.filled, "2018-07")
+img20188= select_time(L8.filled, "2018-07")
+```
+
+```{r}
+write_tif(img20186, "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2",prefix = "Filled_")
+write_tif(img20187, "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2",prefix = "Filled_")
+
+```
+
+
+```{r}
+library(raster)
+tif2016= raster("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2/Filled_2016-02.tif")
+tif20186= raster("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2/Filled_2018-06.tif")
+tif20187=raster("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2/Filled_2018-07.tif")
+tif20188=raster("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2/Filled_2018-08.tif")
+def20187=raster("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/MonitoringDeforestationInLandsatDataCubesUsingNDVI/data/deforestation/def2018-07RasterClipped.tif")
+```
+
+```{r}
+
+new=  tif20188 - tif20186 * def20187
+list= as.list(new)
+short =lapply(list, function(x) x[!is.na(x)])
+short2= unlist(short)
+quantile(short2, c(0.05,0.1))
+hist(short2)
 ```
