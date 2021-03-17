@@ -1,0 +1,202 @@
+---
+title: "Processing and Evaluation"
+author: "Nick Jakuschona"
+date: "17 3 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+#Load data
+load("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVIchanges.Rdata")
+
+#Data Preprocessing
+library(gdalcubes)
+library(magrittr)
+gdalcubes_options(threads=8)
+
+IMAGE_DIR = "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8_cropped" # please change
+
+# database with metadata 
+col = create_image_collection(list.files(IMAGE_DIR, recursive = TRUE, pattern=".tif", full.names  = TRUE), "L8_SR")
+
+# only use "clear" pixels (mask out values not observed, so no data values outside the bounding box)
+L8.clear_mask = image_mask("PIXEL_QA", values=c(322, 386, 834, 898, 1346, 324, 388, 836, 900, 1348), invert = TRUE)
+
+# example yearly data cube at 250m spatial resolution (dx,dy -> extent; dt -> yearly pictures as output, whereby the pixels of each available picture are used (also jedes Einzelne der in 16Tage Rhytmus verfügbaren) but brought together via resampling and aggregation (aggregation --> bringing a lot of pixels to one final pixel representing these a lot pixels))
+v1m = cube_view(srs="EPSG:3857", extent=list(left = -7370182, right = -7235182, top = -993877, bottom = -1096877, t0 ="2019-07-01", t1 = "2019-11-31"), dx=250, dy=250, dt="P1M", resampling = "average", aggregation = "median")
+
+L8.cube = raster_cube(col, v1m, L8.clear_mask)
+L8.cube = select_bands(L8.cube, c("B04", "B05"))
+L8.ndvi = apply_pixel(L8.cube, "(B05-B04)/(B05+B04)", "NDVI")
+
+L8.filled = fill_time(L8.ndvi, "nocb")
+
+list = reduce_space(L8.filled, FUN = function(x) {
+    quantile(unlist(apply(x,1,function(x) x[!is.na(x)])), prob=c(0.95))
+  })
+```
+
+```{r}
+
+array = as_array(list)
+percentile= as.list(array)
+
+times = dimension_values(L8.ndvi)$t
+c=1
+
+
+for(i in times){
+  print(i)
+  
+  img= select_time(L8.filled, i)
+  write_tif(img, "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/MonitoringFull",prefix = "NDVI_")
+  c = c+1
+  
+}
+
+```
+
+````{r}
+library(raster)
+times = dimension_values(L8.ndvi)$t
+c=1
+
+
+
+for(i in times){
+  print(i)
+  fileName=paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/MonitoringFull/NDVI_", i ,".tif")
+  r = raster(fileName)
+  dimension= dim(r)
+  ex = extent(r)
+  d=percentile[c]
+  if(is.na(unlist(d))){
+    percentile[c]=percentile[c-1]
+    d=percentile[c-1]
+  }
+  print(d)
+  draster = raster(ncol=dimension[2], nrow=dimension[1], xmn =ex@xmin, xmx= ex@xmax, ymn=ex@ymin, ymx=ex@ymax)
+
+  values(draster)=unlist(d)
+  imgNormalized = r/draster
+  fileName2=paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/MonitoringDeseasonalized/Norm_", i ,".tif")
+  writeRaster(imgNormalized, fileName2, overwrite=TRUE)
+  c = c+1
+  
+}
+
+```
+
+```{r}
+percentage= 0.1
+newMonth= "2019-09"
+
+
+library("lubridate")
+
+dat = as.Date(paste(newMonth,"-01",sep=""))
+d1= dat%m-% months(2)
+oldMonth = format(d1, "%Y-%m")
+
+newFilename= paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/MonitoringDeseasonalized/Norm_", newMonth ,".tif")
+rasterNew= raster(newFilename)
+oldFilename= paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/MonitoringDeseasonalized/Norm_", oldMonth ,".tif")
+rasterOld= raster(oldFilename)
+
+criticalValue=quantile(changes, percentage)
+
+NDVIchange= rasterNew-rasterOld
+
+overCritical= NDVIchange<=criticalValue
+
+plot(overCritical)
+  
+```
+
+```{r}
+percentage= 0.30
+criticalValue=quantile(changes, percentage)
+
+dateToEvaluate= "2019-08"
+
+
+  filenameDEF =paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/MonitoringDeforestationInLandsatDataCubesUsingNDVI/data/deforestation/def",dateToEvaluate ,"RasterClipped.tif")
+  
+  
+  dat = as.Date(paste(dateToEvaluate,"-01",sep=""))
+  d1= dat%m+% months(1)
+  dat1String = format(d1, "%Y-%m")
+  d2= dat%m-% months(1)
+  dat2String = format(d2, "%Y-%m")
+  print(dat2String)
+  
+  
+  filenameNDVI1 = paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/MonitoringDeseasonalized/Norm_", dat1String ,".tif")
+  filenameNDVI2 = paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/MonitoringDeseasonalized/Norm_", dat2String ,".tif")
+  
+
+  defRaster= raster(filenameDEF)
+
+  NDVI1Raster=raster(filenameNDVI1)
+
+  NDVI2Raster=raster(filenameNDVI2)
+  
+  ext= extent(ex@xmin, ex@xmax, ex@ymin, ex@ymax)
+  defRaster = setExtent(defRaster, ext, keepres = TRUE)
+  
+  diff=  NDVI1Raster - NDVI2Raster
+  overCritical= diff<=criticalValue
+  
+```
+  
+  
+  
+```{r}
+  defRaster[is.na(defRaster[])] <- 0 
+  correctTrue= ((overCritical==1) + (defRaster==1)) == 2
+  correctFalse= (overCritical==0) + (defRaster==0) ==2
+  incorrectTrue= (overCritical==1) + (defRaster==0)==2
+  incorrectFalse= (overCritical==0) + (defRaster==1)==2
+  correctTrueCount = cellStats(correctTrue, "sum")
+  correctTruePercentage = correctTrueCount / cellStats(defRaster==1, "sum")
+  correctFalseCount = cellStats(correctFalse, "sum")
+  correctFalsePercentage = correctFalseCount / cellStats(defRaster==0, "sum")
+  incorrectTrueCount = cellStats(incorrectTrue, "sum")
+  incorrectTruePercentage = cellStats(incorrectTrue, "sum") / cellStats(defRaster==0, "sum")
+  incorrectFalseCount = cellStats(incorrectFalse, "sum")
+  incorrectFalsePercentage = cellStats(incorrectFalse, "sum") / cellStats(defRaster==1, "sum")
+  
+
+
+```
+
+```{r}
+  #divide by zero to create NA
+  criticalNA = overCritical/overCritical
+  plot(NDVI1Raster)
+  plot(test, add=TRUE, legend=FALSE,col=alpha("blue"))
+  
+
+
+```
+
+
+```{r}
+library(gridExtra)
+
+x <- data.frame(row.names=c("Predicted True", "Predicted False"))
+x[,1] <- c(paste0(floor(correctTruePercentage*10000)/100 ," %"), paste0(floor(incorrectFalsePercentage*10000)/100 ," %"))
+x[,2] <- c(paste0(floor(incorrectTruePercentage*10000)/100 ," %"), paste0(floor(correctFalsePercentage*10000)/100 ," %"))
+colnames(x) <- c("Actual True", "Actual False")
+rownames(x)= c("Predicted True", "Predicted False")
+
+ss <- tableGrob(x)
+plot(ss)
+
+```
