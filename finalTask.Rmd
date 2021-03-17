@@ -28,11 +28,10 @@ col = create_image_collection(list.files(IMAGE_DIR, recursive = TRUE, pattern=".
 L8.clear_mask = image_mask("PIXEL_QA", values=c(322, 386, 834, 898, 1346, 324, 388, 836, 900, 1348), invert = TRUE)
 
 # example yearly data cube at 250m spatial resolution (dx,dy -> extent; dt -> yearly pictures as output, whereby the pixels of each available picture are used (also jedes Einzelne der in 16Tage Rhytmus verfügbaren) but brought together via resampling and aggregation (aggregation --> bringing a lot of pixels to one final pixel representing these a lot pixels))
-v1m = cube_view(srs="EPSG:3857", extent=col, dx=250, dy=250, dt="P1M", resampling = "average", aggregation = "median")
+v1m = cube_view(srs="EPSG:3857", extent=list(left = -7370182, right = -7235182, top = -993877, bottom = -1096877, t0 ="2014-06-01", t1 = "2018-12-31"), dx=250, dy=250, dt="P1M", resampling = "average", aggregation = "median")
 
 
-
-
+vsub = cube_view(srs="EPSG:3857", extent=list(left = -7370182, right = -7235182, top = -993877, bottom = -1096877, t0 ="2014-06-01", t1 = "2018-12-31"), dx=1000, dy=1000, dt = "P1M", resampling = "average", aggregation = "median")
 ```
 
 ```{r}
@@ -67,48 +66,124 @@ L8.ndvi = apply_pixel(L8.cube, "(B05-B04)/(B05+B04)", "NDVI")
 ```
 
 ```{r}
-list = reduce_space(L8.ndvi, FUN = function(x) {
+L8.cubesub = raster_cube(col, vsub, L8.clear_mask)
+L8.cubesub = select_bands(L8.cubesub, c("B04", "B05"))
+L8.ndvisub = apply_pixel(L8.cubesub, "(B05-B04)/(B05+B04)", "NDVI")
+
+```
+
+
+
+```{r}
+
+L8.filledsub = fill_time(L8.ndvisub, "nocb")
+L8.filled = fill_time(L8.ndvi, "nocb")
+
+```
+
+```{r}
+list = reduce_space(L8.filledsub, FUN = function(x) {
     quantile(unlist(apply(x,1,function(x) x[!is.na(x)])), prob=c(0.95))
   })
 
+
 array = as_array(list)
+percentile= as.list(array)
 
 ```
 
-```{r}
-tri1 = select_time(L8.ndvi, "2016-02")
+````{r}
+
 times = dimension_values(L8.ndvi)$t
+c=1
 
 
-L8.filled = fill_time(L8.ndvi, "nocb")
+for(i in times){
+  print(i)
+  
+  img= select_time(L8.filled, i)
+  write_tif(img, "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVIFull",prefix = "Nrom_")
+  c = c+1
+  
+}
 
-img20186= select_time(L8.filled, "2018-06")
-img20187= select_time(L8.filled, "2018-07")
-img20188= select_time(L8.filled, "2018-07")
 ```
 
-```{r}
-write_tif(img20186, "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2",prefix = "Filled_")
-write_tif(img20187, "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2",prefix = "Filled_")
-
-```
-
-
-```{r}
+````{r}
 library(raster)
-tif2016= raster("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2/Filled_2016-02.tif")
-tif20186= raster("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2/Filled_2018-06.tif")
-tif20187=raster("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2/Filled_2018-07.tif")
-tif20188=raster("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube2/Filled_2018-08.tif")
-def20187=raster("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/MonitoringDeforestationInLandsatDataCubesUsingNDVI/data/deforestation/def2018-07RasterClipped.tif")
+times = dimension_values(L8.ndvi)$t
+c=1
+
+
+for(i in times){
+  print(i)
+  fileName=paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVIFilled/Norm_", i ,".tif")
+  r = raster(fileName)
+  dimension= dim(r)
+  ex = extent(r)
+  d=percentile[c]
+  print(d)
+  draster = raster(ncol=dimension[2], nrow=dimension[1], xmn =ex@xmin, xmx= ex@xmax, ymn=ex@ymin, ymx=ex@ymax)
+  values(draster)=unlist(d)
+  imgNormalized = r/draster
+  fileName2=paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVINDVIDeseasonalized/Norm_", i ,".tif")
+  writeRaster(imgNormalized, fileName2)
+  c = c+1
+  
+}
+
+```
+
+
+
+
+```{r}
+library("lubridate")
+changesLIST= c()
+dates=c("2014-07","2014-08","2014-09","2014-10","2014-11","2015-06","2015-07","2015-08","2015-09","2015-10","2015-11","2015-12","2016-01","2016-02","2016-03","2016-04","2016-07","2016-08","2016-09","2016-10","2016-11","2017-07","2017-08","2017-09","2017-10","2017-11","2018-01","2018-06","2018-07","2018-08","2018-09")
+dates1=c("2014-12")
+
+for (date in dates){
+  filenameDEF =paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/MonitoringDeforestationInLandsatDataCubesUsingNDVI/data/deforestation/def",date ,"RasterClipped.tif")
+  
+  
+  dat = as.Date(paste(date,"-01",sep=""))
+  d1= dat%m+% months(1)
+  dat1String = format(d1, "%Y-%m")
+  d2= dat%m-% months(1)
+  dat2String = format(d2, "%Y-%m")
+  print(dat2String)
+  
+  
+  filenameNDVI1 = paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVINDVIDeseasonalized/Norm_", dat1String ,".tif")
+  filenameNDVI2 = paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVIDeseasonalized/Norm_", dat2String ,".tif")
+  
+  
+  print(filenameDEF)
+  defRaster= raster(filenameDEF)
+  print(filenameNDVI1)
+  NDVI1Raster=raster(filenameNDVI1)
+  print(filenameNDVI2)
+  NDVI2Raster=raster(filenameNDVI2)
+  
+  ext= extent(ex@xmin, ex@xmax, ex@ymin, ex@ymax)
+  defRaster = setExtent(defRaster, ext, keepres = TRUE)
+  
+  diff=  NDVI1Raster - NDVI2Raster * defRaster
+  list= as.list(diff)
+  short =lapply(list, function(x) x[!is.na(x)])
+  short2= unlist(short)
+  changesLIST= c(changesLIST, short2)
+
+}
+
 ```
 
 ```{r}
 
-new=  tif20188 - tif20186 * def20187
-list= as.list(new)
-short =lapply(list, function(x) x[!is.na(x)])
-short2= unlist(short)
-quantile(short2, c(0.05,0.1))
-hist(short2)
+
+changes= unlist(changesLIST)
+quantile(changes, c(0.05,0.1))
+hist(changes)
+save(changes, file="NDVIchanges.Rdata")
 ```
