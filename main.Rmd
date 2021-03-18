@@ -1,0 +1,16 @@
+---
+title: "Monitoring Deforestation in Landsat DataCubes using NDVI"
+author: "Nick Jakuschona, Tom Niers"
+date: "18 3 2021"
+output: html_document
+---
+
+```{r child = 'PreprocessingReferenceCube.Rmd'}
+```
+
+```{r child = 'PreprocessingMonitoringCube.Rmd'}
+```
+
+```{r child = 'processing_evaluation.Rmd'}
+```
+

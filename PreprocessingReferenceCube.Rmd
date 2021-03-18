@@ -13,87 +13,52 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
-```{r cars}
-#Data Preprocessing
+```{r eval=FALSE}
+#Load Data and create Data cube
+
 library(gdalcubes)
 library(magrittr)
 gdalcubes_options(threads=8)
 
-IMAGE_DIR = "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8_cropped" # please change
+IMAGE_DIR = "data/L8_cropped" # please change
 
-# database with metadata 
+# create image collection with metadata 
 col = create_image_collection(list.files(IMAGE_DIR, recursive = TRUE, pattern=".tif", full.names  = TRUE), "L8_SR")
 
-# only use "clear" pixels (mask out values not observed, so no data values outside the bounding box)
+# only use pixels with the attribute "clear" and "water"
 L8.clear_mask = image_mask("PIXEL_QA", values=c(322, 386, 834, 898, 1346, 324, 388, 836, 900, 1348), invert = TRUE)
 
-# example yearly data cube at 250m spatial resolution (dx,dy -> extent; dt -> yearly pictures as output, whereby the pixels of each available picture are used (also jedes Einzelne der in 16Tage Rhytmus verfügbaren) but brought together via resampling and aggregation (aggregation --> bringing a lot of pixels to one final pixel representing these a lot pixels))
+# monthly data cube at 250m spatial resolution for calculating NDVIs
 v1m = cube_view(srs="EPSG:3857", extent=list(left = -7370182, right = -7235182, top = -993877, bottom = -1096877, t0 ="2014-06-01", t1 = "2018-12-31"), dx=250, dy=250, dt="P1M", resampling = "average", aggregation = "median")
 
-
+# monthly data cube at 1000m spatial resolution for deseasonalization
 vsub = cube_view(srs="EPSG:3857", extent=list(left = -7370182, right = -7235182, top = -993877, bottom = -1096877, t0 ="2014-06-01", t1 = "2018-12-31"), dx=1000, dy=1000, dt = "P1M", resampling = "average", aggregation = "median")
 ```
 
-```{r}
-# calculate NDVI and export as GeoTIFF files at subfolder "L8cube"
-raster_cube(col, v1m, L8.clear_mask) %>%
-  select_bands(c("B04", "B05")) %>%
-  apply_pixel("(B05-B04)/(B05+B04)") %>%
-  write_tif("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube",prefix = "NDVI_")
-  #
-```
-
-  
-  
-## Including Plots
-
-
-```{r pressure, echo=FALSE}
-remotes::install_github("r-spatial/stars")
-library(stars)
-subdir = "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/L8cube"
-f = paste0(subdir, "/", list.files(subdir))
-(st = read_stars(f))
-plot(merge(st))
-```
-
-
-```{r}
+```{r eval=FALSE}
+# calculate NDVI for both resolutions (250m and 1000m)
 L8.cube = raster_cube(col, v1m, L8.clear_mask)
 L8.cube = select_bands(L8.cube, c("B04", "B05"))
 L8.ndvi = apply_pixel(L8.cube, "(B05-B04)/(B05+B04)", "NDVI")
 
-```
-
-```{r}
 L8.cubesub = raster_cube(col, vsub, L8.clear_mask)
 L8.cubesub = select_bands(L8.cubesub, c("B04", "B05"))
 L8.ndvisub = apply_pixel(L8.cubesub, "(B05-B04)/(B05+B04)", "NDVI")
-
 ```
 
 
-
-```{r}
-
+```{r eval=FALSE}
+# Fill "NA" values with next observation 
 L8.filledsub = fill_time(L8.ndvisub, "nocb")
 L8.filled = fill_time(L8.ndvi, "nocb")
 
 ```
 
-```{r}
-list = reduce_space(L8.filledsub, FUN = function(x) {
-    quantile(unlist(apply(x,1,function(x) x[!is.na(x)])), prob=c(0.95))
-  })
 
 
-array = as_array(list)
-percentile= as.list(array)
-
-```
 
 ````{r}
-
+#Save filled tiffs for each time step
 times = dimension_values(L8.ndvi)$t
 c=1
 
@@ -102,31 +67,46 @@ for(i in times){
   print(i)
   
   img= select_time(L8.filled, i)
-  write_tif(img, "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVIFull",prefix = "Nrom_")
+  write_tif(img, "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVIFilled",prefix = "NDVIFilled_")
   c = c+1
   
 }
 
 ```
 
-````{r}
+```{r eval=FALSE}
+#Deseasonalizing
+
+
+#calculate the 0.95 qunatile of NDVI values for each time step
+list = reduce_space(L8.filledsub, FUN = function(x) {
+    quantile(unlist(apply(x,1,function(x) x[!is.na(x)])), prob=c(0.95))
+  })
+
+
+array = as_array(list)
+percentile= as.list(array)
+
 library(raster)
 times = dimension_values(L8.ndvi)$t
 c=1
 
-
+#Divide all pixel values by the 0.95 NDVI quantile of the whole time step
 for(i in times){
   print(i)
-  fileName=paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVIFilled/Norm_", i ,".tif")
+  fileName=paste0("data/NDVIFilled/NDVIFilled_", i ,".tif")
   r = raster(fileName)
   dimension= dim(r)
-  ex = extent(r)
+  ex = raster::extent(r)
   d=percentile[c]
-  print(d)
+
+  #create raster with the same extent, which everywhere has the 0.95 quantile as value
   draster = raster(ncol=dimension[2], nrow=dimension[1], xmn =ex@xmin, xmx= ex@xmax, ymn=ex@ymin, ymx=ex@ymax)
   values(draster)=unlist(d)
+  
+  
   imgNormalized = r/draster
-  fileName2=paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVINDVIDeseasonalized/Norm_", i ,".tif")
+  fileName2=paste0("data/NDVIDeseasonalized/NDVIDes_", i ,".tif")
   writeRaster(imgNormalized, fileName2)
   c = c+1
   
@@ -135,55 +115,85 @@ for(i in times){
 ```
 
 
+```{r eval=FALSE}
+#Export one example timestep as GeoTIFF for presentation purposes
+
+img= select_time(L8.cube, "2016-4")
+write_tif(img,"./exampleImages",prefix = "Raw_")
+
+img= select_time(L8.NDVI, "2016-4")
+write_tif(img,"./exampleImages",prefix = "NDVIraw_")
+
+fileName=paste0("data/NDVIFilled/NDVIFilled_", "2016-4" ,".tif")
+r = raster(fileName)
+writeRaster(r, "./exmapleImages/NDVIfFilled_2016-04.tif")
+
+fileName=paste0("data/NDVIDeseasonalized/NDVIDes_", "2016-4" ,".tif")
+r = raster(fileName)
+writeRaster(r, "./exmapleImages/NDVIDes_2016-04.tif")
 
 
-```{r}
+```
+
+
+
+
+```{r eval=FALSE}
+#calculate NDVI change through deforestation
+
 library("lubridate")
 changesLIST= c()
+
+#list of all dates, where deforestation monitoring data is available
+# http://terrabrasilis.dpi.inpe.br/geonetwork/srv/eng/catalog.search#/metadata/b75b83db-8026-43f9-9537-ee1dfa308158
+
 dates=c("2014-07","2014-08","2014-09","2014-10","2014-11","2015-06","2015-07","2015-08","2015-09","2015-10","2015-11","2015-12","2016-01","2016-02","2016-03","2016-04","2016-07","2016-08","2016-09","2016-10","2016-11","2017-07","2017-08","2017-09","2017-10","2017-11","2018-01","2018-06","2018-07","2018-08","2018-09")
-dates1=c("2014-12")
+
 
 for (date in dates){
-  filenameDEF =paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/MonitoringDeforestationInLandsatDataCubesUsingNDVI/data/deforestation/def",date ,"RasterClipped.tif")
+  filenameDEF =paste0("./data/deforestation/def",date ,"RasterClipped.tif")
   
-  
+  #inspect NDVI rasters one month before and after the deforestation was monitored
   dat = as.Date(paste(date,"-01",sep=""))
   d1= dat%m+% months(1)
   dat1String = format(d1, "%Y-%m")
   d2= dat%m-% months(1)
   dat2String = format(d2, "%Y-%m")
-  print(dat2String)
+
   
   
   filenameNDVI1 = paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVINDVIDeseasonalized/Norm_", dat1String ,".tif")
   filenameNDVI2 = paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVIDeseasonalized/Norm_", dat2String ,".tif")
   
-  
-  print(filenameDEF)
+
   defRaster= raster(filenameDEF)
-  print(filenameNDVI1)
   NDVI1Raster=raster(filenameNDVI1)
-  print(filenameNDVI2)
   NDVI2Raster=raster(filenameNDVI2)
   
-  ext= extent(ex@xmin, ex@xmax, ex@ymin, ex@ymax)
+  ext= raster::extent(ex@xmin, ex@xmax, ex@ymin, ex@ymax)
   defRaster = setExtent(defRaster, ext, keepres = TRUE)
   
+  #calculate the difference of NDVI maps where deforestation was monitored
   diff=  NDVI1Raster - NDVI2Raster * defRaster
+  
+  #convert all changes as values to list and remove "NA"
   list= as.list(diff)
   short =lapply(list, function(x) x[!is.na(x)])
   short2= unlist(short)
+  
+  
   changesLIST= c(changesLIST, short2)
 
 }
-
-```
-
-```{r}
-
-
 changes= unlist(changesLIST)
-quantile(changes, c(0.05,0.1))
+
 hist(changes)
+
+#save changes
 save(changes, file="NDVIchanges.Rdata")
+
 ```
+
+
+
+

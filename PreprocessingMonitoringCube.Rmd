@@ -1,0 +1,107 @@
+---
+title: "PreprocessingMonitoringCube"
+author: "Nick Jakuschona, Tom Niers"
+date: "18 3 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+## R Markdown
+
+```{r eval=FALSE}
+#Load Data and create Data cube
+
+
+#Data Preprocessing
+library(gdalcubes)
+library(magrittr)
+gdalcubes_options(threads=8)
+
+IMAGE_DIR = "data/L8_cropped" # please change
+
+# image collection with metadata 
+col = create_image_collection(list.files(IMAGE_DIR, recursive = TRUE, pattern=".tif", full.names  = TRUE), "L8_SR")
+
+# only use pixels with the attribute "clear" and "water"
+L8.clear_mask = image_mask("PIXEL_QA", values=c(322, 386, 834, 898, 1346, 324, 388, 836, 900, 1348), invert = TRUE)
+
+# monthly data cube at 250m spatial resolution for calculating NDVIs
+#the time span is higher than one timestamp here to cover also possible cloud free pixels
+
+v1m = cube_view(srs="EPSG:3857", extent=list(left = -7370182, right = -7235182, top = -993877, bottom = -1096877, t0 ="2019-07-01", t1 = "2019-11-31"), dx=250, dy=250, dt="P1M", resampling = "average", aggregation = "median")
+
+# calculate NDVI 
+L8.cube = raster_cube(col, v1m, L8.clear_mask)
+L8.cube = select_bands(L8.cube, c("B04", "B05"))
+L8.ndvi = apply_pixel(L8.cube, "(B05-B04)/(B05+B04)", "NDVI")
+
+# Fill "NA" values with next observation 
+L8.filled = fill_time(L8.ndvi, "nocb")
+
+
+```
+
+```{r}
+#Save filled tiffs for each time step
+
+times = dimension_values(L8.ndvi)$t
+c=1
+
+
+for(i in times){
+  print(i)
+  
+  img= select_time(L8.filled, i)
+  write_tif(img, "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/MonitoringFull",prefix = "NDVI_")
+  c = c+1
+  
+}
+
+```
+
+````{r}
+#Deseasonalizing
+library(raster)
+times = dimension_values(L8.ndvi)$t
+c=1
+
+#calculate the 0.95 qunatile of NDVI values for each time step
+list = reduce_space(L8.filled, FUN = function(x) {
+    quantile(unlist(apply(x,1,function(x) x[!is.na(x)])), prob=c(0.95))
+  })
+
+array = as_array(list)
+percentile= as.list(array)
+
+
+#Divide all pixel values by the 0.95 NDVI quantile of the whole time step
+for(i in times){
+  print(i)
+  fileName=paste0("data/MonitoringFilled/NDVIFilled_", i ,".tif")
+  r = raster(fileName)
+  dimension= dim(r)
+  ex = raster::extent(r)
+  d=percentile[c]
+  
+  #if percentile could not be calculated take the 0.95 percentile from previous time step
+  if(is.na(unlist(d))){
+    percentile[c]=percentile[c-1]
+    d=percentile[c-1]
+  }
+
+  draster = raster(ncol=dimension[2], nrow=dimension[1], xmn =ex@xmin, xmx= ex@xmax, ymn=ex@ymin, ymx=ex@ymax)
+
+  values(draster)=unlist(d)
+  imgNormalized = r/draster
+  fileName2=paste0("data/MonitoringDeseasonalized/Des_", i ,".tif")
+  writeRaster(imgNormalized, fileName2, overwrite=TRUE)
+  c = c+1
+  
+}
+
+```
