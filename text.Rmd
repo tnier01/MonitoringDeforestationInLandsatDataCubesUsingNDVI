@@ -1,0 +1,56 @@
+# requirements
+- 5 pages excluding figures and tables 
+
+# titel 
+Monitoring Deforestation In Landsat Data Cubes Using NDVI
+
+# Abstract
+
+# Introduction 
+The deforestation of the rainforest is a recurring topic in science and public. 
+Especially due to the worsening of climate change, there are more and more calls for countries that contain large parts of the rainforest to stop deforestation. 
+This is especially true for Brazil, which has the largest amount of tropical rainforest in the world, covering an area of 318,7 ha ([statista](https://de.statista.com/statistik/daten/studie/1184216/umfrage/die-zehn-laender-mit-der-groessten-flaeche-tropischer-regenwaelder/)). 
+For a long time it seemed that Brazil could counteract deforestation. 
+At the beginning of the 2010s, Brazil managed to reduce deforestation of the rainforest by 84%, compared to the historic peak of 2004. 
+Thus, in 2012, only 4,571 km^2^ were cut down instead of 27,772 km^2^ in 2004 ([nature ecology & evolution: The Brazilian Amazon deforestation rate in 2020 is the greatest of the decade](https://doi.org/10.1038/s41559-020-01368-x)).
+However, this trend has reversed since 2013.
+The Brazilian Amazon Deforestation Monitoring Program ([PRODES](http://www.obt.inpe.br/OBT/assuntos/programas/amazonia/prodes)) estimated deforestation of 11,088 km2 for 2020, which corresponds to the highest value for the entire decade. 
+This upward trend in deforestation was triggered by changes in the Brazilian Forest Code and new laws which may allow illegally grabbed public land to be legalized ([Clarifying Amazonia's burning crisis](https://doi.org/10.1111/gcb.14872)).
+Thus, illegal clearing of the rainforest, which is mostly difficult to record, occurs again and again. 
+With this work we present a tool to capture deforestation of the Brazilian rainforest in near real time by analyzing the NDVI in Landsat Data Cubes. 
+Using previously collected reference data for a study area in the Brazilian Amazon, we calculate the changes in NDVI after deforestation in order to use these values for future detection of deforestation. 
+With the input of two images and a value that determines the threshold beyond which the NDVI difference is considered critical and thus the land is identified as deforested, the satellite images can be analyzed for deforestation. 
+To make the staellite images usable, clouds were removed and thus missing pixels were replaced by the pixels of future timestamps. 
+In addition seasonal variations where removed, which would otherwise have disguised erroneously deforestation in the data. 
+The methodology was largely taken from the paper ([Monitoring Deforestation at Sub-Annual Scales as Extreme Events in Landsat Data Cubes ](https://doi.org/10.3390/rs8080651)), leaving out some components that were not interesting for us and adding others that we needed, e.g. for the near real time analysis. 
+In the following, we specify our used data, briefly describe the used methods as well as results and discuss them afterwards. 
+
+# Data
+To perform our calculations, we chose a study area located in the northwest of Brazil. 
+This area is located along the border of the Brazilian states Randônia, Amazonas and bordering the Bolivian state of Pando (compare Figure TODO). 
+![](dataStudyArea.png) 
+We chose this study area because it is completely covered by the area of the native rainforest and is also affected by deforestation. 
+To carry out our methods, two types of data were needed. 
+On the one hand satellite data to calculate the NDVI and on the other hand reference data to make a comparison with already determined deforested areas. 
+The satellite data we used are Landsat 8 data in *GeoTIFF* format in the CRS *WGS 84 / UTM zone 19N*, with a spatial extent of *[left = -7347259, right = -7314864, top = -995476.1, bottom = -1025490]* and a temporal extent *2014-01-01* until *2019-12-31*.
+The satellite image were used in a size of 540*412 pixels, wherby we used a spatial resolution of 250m for the calculation of the NDVI values and a spatial resolution of 1000m for deseasonalization of the data due to limited computer capacities.
+The raw data is available ([here](https://uni-muenster.sciebo.de/s/yvFiuWGqG7riliA/download)).
+In addition to the data needed to calculate the NDVI, data was also needed where deforestation had already been detected. 
+We obtained these data from the PRODES program already mentioned in the introduction. 
+They publish data for the deforested areas in Brazil larger than 6.25 hectares starting from 2008. 
+Wherby they considers deforestation to be the suppression of native vegetation, regardless of the future use of these areas.
+We have downloaded the corresponding data as shapefiles ([here](http://terrabrasilis.dpi.inpe.br/geonetwork/srv/eng/catalog.search#/metadata/b75b83db-8026-43f9-9537-ee1dfa308158)). 
+
+# methods 
+- alle Daten auf monatliche Basis gebracht (erwähnen da QGIS Schritt nicht direkt ersichtlich) 
+- comparison as binding 
+
+# results 
+
+# discussion/ conclusion
+- methods should be discussed in the context of simpler and more complex alternatives 
+- describe the methods in context of spatio temporal (Ideally, the methods assessed should be spatiotemporal, i.e. deal with spatial and temporal variation at the same time, but, as we have seen, this is often difficult. If the methods assessed are purely spatial, or purely temporal, try to discuss them in the light of spatiotemporal alternatives.). 
+- who did what? 
+- was zum ERC schreiben auch den Aspekt erwähnen, dass wir eigentlich das Paper ja reproduzieren wollten, ging aber nicht aufgrund fehlender Rückmeldung etc. daher wollen wir es nun besser machen
+
+# references 
