@@ -57,7 +57,9 @@ They publish data for the deforested areas in Brazil larger than 6.25 hectares s
 Wherby they considers deforestation to be the suppression of native vegetation, regardless of the future use of these areas.
 We have downloaded the corresponding data as shapefiles ([here](http://terrabrasilis.dpi.inpe.br/geonetwork/srv/eng/catalog.search#/metadata/b75b83db-8026-43f9-9537-ee1dfa308158)). 
 
-![](data/StudyArea.png) 
+<p align="middle">
+  <img src="data/StudyArea.png" width="500" />
+</p>
 </div>
 
 # Methods 
@@ -92,6 +94,27 @@ We have deliberately chosen to fill with pixels that are in the future, as other
 In the following the NDVI images are spatially normalised to reduce saisonality. 
 Based on the justification from the paper [Monitoring Deforestation at Sub-Annual Scales as Extreme Events in Landsat Data Cubes ](https://doi.org/10.3390/rs8080651) we divide for each time step each pixel value by the 0.95 NDVI quantile of the whole time step.
  
+![](exampleImages/NDVIDes_2016-04.tif)
+
+```{r}
+library(raster)
+library(rasterVis)
+
+r1 = raster("exampleImages/Raw_2016-04.tif")
+r2 = raster("exampleImages/NDVIraw_2016-04.tif")
+r3 = raster("exampleImages/NDVIFilled_2016-04.tif")
+r4 = raster("exampleImages/NDVIDes_2016-04.tif")
+
+s = stack(r1, r2, r3, r4)
+levelplot(s, scales=list(draw=FALSE), names.attr=c('Raw', 'NDVI Raw', 'NDVI Filled', 'NDVI Deseasonalized'))
+```
+
+<p align="middle">
+  <img src="exampleImages/NDVIDes_2016-04.tif" width="100" />
+  <img src="exampleImages/NDVIFilled_2016-04.tif" width="100" /> 
+  <img src="exampleImages/NDVIraw_2016-04.tif" width="100" />
+  <img src="exampleImages/Raw_2016-04.tif" width="100" />
+</p>
 
 
 </div>
@@ -104,6 +127,14 @@ Based on the justification from the paper [Monitoring Deforestation at Sub-Annua
 - comparison as binding 
 
 # results 
+With our work we archived different Results.
+First we calculated how the NDVI change of a deforested region from 2014 to 2018. 
+With this data we can calculate a percentile, at which 
+```{r}
+load("data/NDVIchanges.Rdata")
+hist(changes)
+
+```
 - über false postive... berichten 
 - was passiert wenn man das quantile verändert 
 
