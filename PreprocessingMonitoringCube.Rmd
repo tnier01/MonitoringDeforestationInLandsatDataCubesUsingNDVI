@@ -5,9 +5,7 @@ date: "18 3 2021"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+
 
 
 
@@ -46,7 +44,7 @@ L8.filled = fill_time(L8.ndvi, "nocb")
 
 ```
 
-```{r}
+```{r eval=FALSE}
 #Save filled tiffs for each time step
 
 times = dimension_values(L8.ndvi)$t
@@ -57,14 +55,14 @@ for(i in times){
   print(i)
   
   img= select_time(L8.filled, i)
-  write_tif(img, "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/MonitoringFull",prefix = "NDVI_")
+  write_tif(img, "data/MonitoringFilled",prefix = "NDVIFilled_")
   c = c+1
   
 }
 
 ```
 
-````{r}
+````{r eval=FALSE}
 #Deseasonalizing
 library(raster)
 times = dimension_values(L8.ndvi)$t
@@ -78,7 +76,7 @@ list = reduce_space(L8.filled, FUN = function(x) {
 array = as_array(list)
 percentile= as.list(array)
 
-
+dir.create("data/MonitoringDeseasonalized")
 #Divide all pixel values by the 0.95 NDVI quantile of the whole time step
 for(i in times){
   print(i)
