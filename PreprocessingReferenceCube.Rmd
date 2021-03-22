@@ -5,11 +5,7 @@ date: "15 3 2021"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
-## 
 
 
 
@@ -29,10 +25,10 @@ col = create_image_collection(list.files(IMAGE_DIR, recursive = TRUE, pattern=".
 L8.clear_mask = image_mask("PIXEL_QA", values=c(322, 386, 834, 898, 1346, 324, 388, 836, 900, 1348), invert = TRUE)
 
 # monthly data cube at 250m spatial resolution for calculating NDVIs
-v1m = cube_view(srs="EPSG:3857", extent=list(left = -7370182, right = -7235182, top = -993877, bottom = -1096877, t0 ="2014-06-01", t1 = "2018-12-31"), dx=250, dy=250, dt="P1M", resampling = "average", aggregation = "median")
+v1m = cube_view(srs="EPSG:3857", extent=list(left = -7370182, right = -7235182, top = -993877, bottom = -1096877, t0 ="2014-06-01", t1 = "2019-09-31"), dx=250, dy=250, dt="P1M", resampling = "average", aggregation = "median")
 
 # monthly data cube at 1000m spatial resolution for deseasonalization
-vsub = cube_view(srs="EPSG:3857", extent=list(left = -7370182, right = -7235182, top = -993877, bottom = -1096877, t0 ="2014-06-01", t1 = "2018-12-31"), dx=1000, dy=1000, dt = "P1M", resampling = "average", aggregation = "median")
+vsub = cube_view(srs="EPSG:3857", extent=list(left = -7370182, right = -7235182, top = -993877, bottom = -1096877, t0 ="2014-06-01", t1 = "2019-09-31"), dx=1000, dy=1000, dt = "P1M", resampling = "average", aggregation = "median")
 ```
 
 ```{r eval=FALSE}
@@ -57,7 +53,7 @@ L8.filled = fill_time(L8.ndvi, "nocb")
 
 
 
-````{r}
+````{r eval=FALSE}
 #Save filled tiffs for each time step
 times = dimension_values(L8.ndvi)$t
 c=1
@@ -67,7 +63,7 @@ for(i in times){
   print(i)
   
   img= select_time(L8.filled, i)
-  write_tif(img, "C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVIFilled",prefix = "NDVIFilled_")
+  write_tif(img, "data/ReferenceFilled/",prefix = "NDVIFilled_")
   c = c+1
   
 }
@@ -91,10 +87,11 @@ library(raster)
 times = dimension_values(L8.ndvi)$t
 c=1
 
+dir.create("data/ReferenceDeseasonalized")
 #Divide all pixel values by the 0.95 NDVI quantile of the whole time step
 for(i in times){
   print(i)
-  fileName=paste0("data/NDVIFilled/NDVIFilled_", i ,".tif")
+  fileName=paste0("data/ReferenceFilled/NDVIFilled_", i ,".tif")
   r = raster(fileName)
   dimension= dim(r)
   ex = raster::extent(r)
@@ -106,7 +103,8 @@ for(i in times){
   
   
   imgNormalized = r/draster
-  fileName2=paste0("data/NDVIDeseasonalized/NDVIDes_", i ,".tif")
+  dir.create("data/ReferenceDeseasonalized")
+  fileName2=paste0("data/ReferenceDeseasonalized/NDVIDes_", i ,".tif")
   writeRaster(imgNormalized, fileName2)
   c = c+1
   
@@ -118,19 +116,19 @@ for(i in times){
 ```{r eval=FALSE}
 #Export one example timestep as GeoTIFF for presentation purposes
 
-img= select_time(L8.cube, "2016-4")
+img= select_time(L8.cube, "2016-04")
 write_tif(img,"./exampleImages",prefix = "Raw_")
 
-img= select_time(L8.NDVI, "2016-4")
+img= select_time(L8.ndvi, "2016-04")
 write_tif(img,"./exampleImages",prefix = "NDVIraw_")
 
-fileName=paste0("data/NDVIFilled/NDVIFilled_", "2016-4" ,".tif")
+fileName=paste0("data/ReferenceFilled/NDVIFilled_", "2016-04" ,".tif")
 r = raster(fileName)
-writeRaster(r, "./exmapleImages/NDVIfFilled_2016-04.tif")
+writeRaster(r, "./exampleImages/NDVIFilled_2016-04.tif")
 
-fileName=paste0("data/NDVIDeseasonalized/NDVIDes_", "2016-4" ,".tif")
+fileName=paste0("data/ReferenceDeseasonalized/NDVIDes_", "2016-04" ,".tif")
 r = raster(fileName)
-writeRaster(r, "./exmapleImages/NDVIDes_2016-04.tif")
+writeRaster(r, "./exampleImages/NDVIDes_2016-04.tif")
 
 
 ```
@@ -162,8 +160,8 @@ for (date in dates){
 
   
   
-  filenameNDVI1 = paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVINDVIDeseasonalized/Norm_", dat1String ,".tif")
-  filenameNDVI2 = paste0("C:/Users/nick1/OneDrive - uni-muenster.de/Master/Semester1/AOSD/finalTask/NDVIDeseasonalized/Norm_", dat2String ,".tif")
+  filenameNDVI1 = paste0("data/ReferenceDeseasonalized/NDVIDes_", dat1String ,".tif")
+  filenameNDVI2 = paste0("data/ReferenceDeseasonalized/NDVIDes_", dat2String ,".tif")
   
 
   defRaster= raster(filenameDEF)

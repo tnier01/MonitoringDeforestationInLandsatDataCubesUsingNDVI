@@ -5,11 +5,8 @@ date: "17 3 2021"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
-```{r}
+```{r, out.width=600}
 #Detect deforestation on a added month
 
 # set variables
@@ -19,6 +16,10 @@ newMonth= "2019-09" # the month which should be proofed. Month must be deaseason
 load("data/NDVIchanges.Rdata")
 
 library("lubridate")
+library("raster")
+
+#calculate the NDVI decrease value at which we predict a deforestation
+criticalValue=quantile(changes, percentage)
 
 #Select NDVI values from 2 month ago, to detect changes
 dat = as.Date(paste(newMonth,"-01",sep=""))
@@ -30,8 +31,7 @@ rasterNew= raster(newFilename)
 oldFilename= paste0("data/MonitoringDeseasonalized/Norm_", oldMonth ,".tif")
 rasterOld= raster(oldFilename)
 
-#calculate the NDVI decrease value at which we predict a deforestation
-criticalValue=quantile(changes, percentage)
+
 
 # calculate the NDVI change
 NDVIchange= rasterNew-rasterOld
@@ -51,10 +51,10 @@ overCritical= NDVIchange<=criticalValue
 
 plotFigure1= function(rasterNew, criticalNA){
   plot(rasterNew)
-  plot(criticalNA, add=TRUE, legend=FALSE,col=alpha("blue"))
+  plot(criticalNA, add=TRUE, legend=FALSE,col="blue")
 }
 
-plotFigure1()
+plotFigure1(rasterNew, criticalNA)
   
 
 
@@ -69,7 +69,7 @@ plotFigure1()
 dateToEvaluate= "2019-08"
 
 
-  filenameDEF =paste0("/data/deforestation/def",dateToEvaluate ,"RasterClipped.tif")
+  filenameDEF =paste0("data/deforestation/def",dateToEvaluate ,"RasterClipped.tif")
   
   #inspect NDVI rasters one month before and after the deforestation was monitored
   dat = as.Date(paste(dateToEvaluate,"-01",sep=""))
@@ -89,8 +89,9 @@ dateToEvaluate= "2019-08"
   NDVI1Raster=raster(filenameNDVI1)
 
   NDVI2Raster=raster(filenameNDVI2)
+
   
-  ext= extent(ex@xmin, ex@xmax, ex@ymin, ex@ymax)
+  ext= raster::extent(NDVI1Raster)
   defRaster = setExtent(defRaster, ext, keepres = TRUE)
   
   # calculate the NDVI change
@@ -149,6 +150,6 @@ plotFigure2= function(table){
 plot(table)
 }
 
-plotFigure2()
+plotFigure2(table)
 
 ```
