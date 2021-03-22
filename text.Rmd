@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message=FALSE)
 ```
 
 # requirements
@@ -59,6 +59,9 @@ Wherby they considers deforestation to be the suppression of native vegetation, 
 We have downloaded the corresponding data as shapefiles ([TerraBrasilis catalogue](http://terrabrasilis.dpi.inpe.br/geonetwork/srv/eng/catalog.search#/metadata/b75b83db-8026-43f9-9537-ee1dfa308158)). 
 
 <p align="middle">
+<font size="4">**Figure X: Study Area**</font>
+</p>
+<p align="middle">
   <img src="data/StudyArea.png" width="500" />
 </p>
 </div>
@@ -95,7 +98,7 @@ We have deliberately chosen to fill with pixels that are in future time steps, a
 In the following the NDVI images are spatially normalised to reduce saisonality. 
 Based on the justification from the paper [Monitoring Deforestation at Sub-Annual Scales as Extreme Events in Landsat Data Cubes ](https://doi.org/10.3390/rs8080651) we divide for each time step each pixel value by the 0.95 NDVI quantile of the whole time step.
  
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.align = 'center'}
 library(raster)
 library(rasterVis)
 
@@ -104,7 +107,7 @@ raw2 = raster("exampleImages/Raw_Green_2016-04.tif")
 raw3 = raster("exampleImages/Raw_Red_2016-04.tif")
 raw = stack(raw1, raw2, raw3)
 
-plotRGB(raw, r=3, g=2, b=1, zlim=c(0, 1500), scale=1500, main='Raw with mask', axes=TRUE)
+plotRGB(raw, r=3, g=2, b=1, zlim=c(0, 1500), scale=1500, axes=TRUE, main='Figure X: Initial Landsat-8 Data After Masking')
  
 #r1 = raster("exampleImages/Raw_2016-04.tif")
 r1 = raster("exampleImages/NDVIraw_2016-04.tif")
@@ -112,7 +115,7 @@ r2 = raster("exampleImages/NDVIFilled_2016-04.tif")
 r3 = raster("exampleImages/NDVIDes_2016-04.tif")
 
 s = stack(r1, r2, r3)
-levelplot(s, scales=list(draw=FALSE), names.attr=c('NDVI Raw', 'NDVI Filled', 'NDVI Deseasonalized'))
+levelplot(s, scales=list(draw=FALSE), names.attr=c('Figure X.1: NDVI Raw', 'Figure X.2: NDVI Filled', 'Figure X.3: NDVI Deseasonalized'), main='Figure X: NDVI Data at Different Preprocesing Stages')
 ```
 
 With the previous mentioned steps, the satellite data were adequately prepared to examine how the NDVI had changed in relation to a deforestation event. 
@@ -137,14 +140,13 @@ If a deforestation event was reported by PRODES in the intervening month, the de
 The table thus interactively displays the percentage of correctly recognized and incorrectly recognized values in relation to the currently choosen percentile. 
 </div>
 
-# results 
+# Results 
 With our work we archived different Results.
 First we calculated how the NDVI change of a deforested region from 2014 to 2018. 
 With this data we can calculate a percentile, at which we th
-```{r}
+```{r, fig.align = 'center'}
 load("data/NDVIchanges.Rdata")
-hist(changes)
-
+hist(changes, main='Figure X: NDVI Changes Depending on Their Frequency', xlab='NDVI Changes', ylab="Frequency")
 ```
 - über false postive... berichten 
 - was passiert wenn man das quantile verändert 
