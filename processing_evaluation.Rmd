@@ -6,7 +6,7 @@ output: html_document
 ---
 
 
-```{r, out.width=600}
+```{r, out.width=600, echo=FALSE}
 #Detect deforestation on a added month
 
 # set variables
@@ -43,7 +43,7 @@ overCritical= NDVIchange<=criticalValue
   
 ```
 
-```{r}
+```{r, echo=FALSE}
 #show NDVI map with detected deforestation
 
   #divide by zero to create NA
@@ -60,7 +60,7 @@ plotFigure1(rasterNew, criticalNA)
 
 ```
 
-```{r}
+```{r, echo=FALSE}
 # Evaluation 
 
 
@@ -105,7 +105,7 @@ dateToEvaluate= "2019-08"
   
   
   
-```{r}
+```{r, echo=FALSE}
   #Proof our detection against reference data
 
   #change NA to 0
@@ -136,7 +136,7 @@ dateToEvaluate= "2019-08"
 
 
 
-```{r}
+```{r, echo=FALSE}
 library(gridExtra)
 
 x <- data.frame(row.names=c("Detected True", "Detected False"))
