@@ -78,7 +78,7 @@ for(i in times){
 #Deseasonalizing
 
 
-#calculate the 0.95 qunatile of NDVI values for each time step
+#calculate the 0.95 quantile of NDVI values for each time step
 list = reduce_space(L8.filledsub, FUN = function(x) {
     quantile(unlist(apply(x,1,function(x) x[!is.na(x)])), prob=c(0.95))
   })
