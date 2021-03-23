@@ -1,15 +1,9 @@
 ---
-title: "PreprocessingMonitoringCube"
-author: "Nick Jakuschona, Tom Niers"
-date: "18 3 2021"
+title: "Preprocessing of Monitoring Cube"
+author: "Nick Jakuschona – n_jaku01@uni-muenster.de, Tom Niers – tom.niers@uni-muenster.de"
+date: "24.3.2021"
 output: html_document
 ---
-
-
-
-
-
-## R Markdown
 
 ```{r eval=FALSE}
 #Load Data and create Data cube

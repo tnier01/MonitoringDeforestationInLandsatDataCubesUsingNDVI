@@ -1,0 +1,154 @@
+---
+title: "Processing and Evaluation of Monitoring Cube"
+author: "Nick Jakuschona – n_jaku01@uni-muenster.de, Tom Niers – tom.niers@uni-muenster.de"
+date: "24.3.2021"
+output: html_document
+---
+
+```{r, out.width=600, echo=FALSE}
+#Detect deforestation on a added month
+
+# set variables
+percentage= 0.1 # the quantile of reference data which should be used to detect deforestation
+newMonth= "2019-09" # the month which should be proofed. Month must be deaseasonalized and saved. This can be ideally done by the PreprocessingMonitoringCube.Rmd file.
+
+load("data/NDVIchanges.Rdata")
+
+library("lubridate")
+library("raster")
+
+#calculate the NDVI decrease value at which we predict a deforestation
+criticalValue=quantile(changes, percentage)
+
+#Select NDVI values from 2 month ago, to detect changes
+dat = as.Date(paste(newMonth,"-01",sep=""))
+d1= dat%m-% months(2)
+oldMonth = format(d1, "%Y-%m")
+
+newFilename= paste0("data/MonitoringDeseasonalized/Norm_", newMonth ,".tif")
+rasterNew= raster(newFilename)
+oldFilename= paste0("data/MonitoringDeseasonalized/Norm_", oldMonth ,".tif")
+rasterOld= raster(oldFilename)
+
+
+
+# calculate the NDVI change
+NDVIchange= rasterNew-rasterOld
+
+#check where the NDVI decrease is over the critical value
+overCritical= NDVIchange<=criticalValue
+
+
+  
+```
+
+```{r, echo=FALSE}
+#show NDVI map with detected deforestation
+
+  #divide by zero to create NA
+  criticalNA = overCritical/overCritical
+
+plotFigure1= function(rasterNew, criticalNA){
+  plot(rasterNew)
+  plot(criticalNA, add=TRUE, legend=FALSE,col="blue")
+}
+
+plotFigure1(rasterNew, criticalNA)
+  
+
+
+```
+
+```{r, echo=FALSE}
+# Evaluation 
+
+
+#date, where deforestation monitoring data is available
+# http://terrabrasilis.dpi.inpe.br/geonetwork/srv/eng/catalog.search#/metadata/b75b83db-8026-43f9-9537-ee1dfa308158
+dateToEvaluate= "2019-08"
+
+
+  filenameDEF =paste0("data/deforestation/def",dateToEvaluate ,"RasterClipped.tif")
+  
+  #inspect NDVI rasters one month before and after the deforestation was monitored
+  dat = as.Date(paste(dateToEvaluate,"-01",sep=""))
+  d1= dat%m+% months(1)
+  dat1String = format(d1, "%Y-%m")
+  d2= dat%m-% months(1)
+  dat2String = format(d2, "%Y-%m")
+  print(dat2String)
+  
+  
+  filenameNDVI1 = paste0("data/MonitoringDeseasonalized/Norm_", dat1String ,".tif")
+  filenameNDVI2 = paste0("data/MonitoringDeseasonalized/Norm_", dat2String ,".tif")
+  
+
+  defRaster= raster(filenameDEF)
+
+  NDVI1Raster=raster(filenameNDVI1)
+
+  NDVI2Raster=raster(filenameNDVI2)
+
+  
+  ext= raster::extent(NDVI1Raster)
+  defRaster = setExtent(defRaster, ext, keepres = TRUE)
+  
+  # calculate the NDVI change
+  diff=  NDVI1Raster - NDVI2Raster
+  
+  
+  #check where the NDVI decrease is over the critical value
+  overCritical= diff<=criticalValue
+  
+```
+  
+  
+  
+```{r, echo=FALSE}
+  #Proof our detection against reference data
+
+  #change NA to 0
+  defRaster[is.na(defRaster[])] <- 0 
+
+  #calculate correct and incorrect detections 
+  correctTrue= ((overCritical==1) + (defRaster==1)) == 2
+  correctFalse= (overCritical==0) + (defRaster==0) ==2
+  incorrectTrue= (overCritical==1) + (defRaster==0)==2
+  incorrectFalse= (overCritical==0) + (defRaster==1)==2
+  
+  correctTrueCount = cellStats(correctTrue, "sum")
+  correctTruePercentage = correctTrueCount / cellStats(defRaster==1, "sum")
+  
+  correctFalseCount = cellStats(correctFalse, "sum")
+  correctFalsePercentage = correctFalseCount / cellStats(defRaster==0, "sum")
+  
+  incorrectTrueCount = cellStats(incorrectTrue, "sum")
+  incorrectTruePercentage = cellStats(incorrectTrue, "sum") / cellStats(defRaster==0, "sum")
+  
+  incorrectFalseCount = cellStats(incorrectFalse, "sum")
+  incorrectFalsePercentage = cellStats(incorrectFalse, "sum") / cellStats(defRaster==1, "sum")
+  
+
+
+```
+
+
+
+
+```{r, echo=FALSE}
+library(gridExtra)
+
+x <- data.frame(row.names=c("Detected True", "Detected False"))
+x[,1] <- c(paste0(floor(correctTruePercentage*10000)/100 ," %"), paste0(floor(incorrectFalsePercentage*10000)/100 ," %"))
+x[,2] <- c(paste0(floor(incorrectTruePercentage*10000)/100 ," %"), paste0(floor(correctFalsePercentage*10000)/100 ," %"))
+colnames(x) <- c("Actual True", "Actual False")
+
+table <- tableGrob(x)
+
+plotFigure2= function(table){
+plot(table)
+}
+
+plotFigure2(table)
+
+```
