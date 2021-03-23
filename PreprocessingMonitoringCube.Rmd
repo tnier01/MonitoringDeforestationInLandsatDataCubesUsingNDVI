@@ -49,7 +49,7 @@ for(i in times){
   print(i)
   
   img= select_time(L8.filled, i)
-  write_tif(img, "data/MonitoringFilled",prefix = "NDVIFilled_")
+  write_tif(img, "data/MonitoringFilled",prefix = "MonitoringFilled_")
   c = c+1
   
 }
@@ -74,7 +74,7 @@ dir.create("data/MonitoringDeseasonalized")
 #Divide all pixel values by the 0.95 NDVI quantile of the whole time step
 for(i in times){
   print(i)
-  fileName=paste0("data/MonitoringFilled/NDVIFilled_", i ,".tif")
+  fileName=paste0("data/MonitoringFilled/MonitoringFilled_", i ,".tif")
   r = raster(fileName)
   dimension= dim(r)
   ex = raster::extent(r)

@@ -25,9 +25,9 @@ dat = as.Date(paste(newMonth,"-01",sep=""))
 d1= dat%m-% months(2)
 oldMonth = format(d1, "%Y-%m")
 
-newFilename= paste0("data/MonitoringDeseasonalized/Norm_", newMonth ,".tif")
+newFilename= paste0("data/MonitoringDeseasonalized/Des_", newMonth ,".tif")
 rasterNew= raster(newFilename)
-oldFilename= paste0("data/MonitoringDeseasonalized/Norm_", oldMonth ,".tif")
+oldFilename= paste0("data/MonitoringDeseasonalized/Des_", oldMonth ,".tif")
 rasterOld= raster(oldFilename)
 
 
@@ -79,8 +79,8 @@ dateToEvaluate= "2019-08"
   print(dat2String)
   
   
-  filenameNDVI1 = paste0("data/MonitoringDeseasonalized/Norm_", dat1String ,".tif")
-  filenameNDVI2 = paste0("data/MonitoringDeseasonalized/Norm_", dat2String ,".tif")
+  filenameNDVI1 = paste0("data/MonitoringDeseasonalized/Des_", dat1String ,".tif")
+  filenameNDVI2 = paste0("data/MonitoringDeseasonalized/Des_", dat2String ,".tif")
   
 
   defRaster= raster(filenameDEF)
