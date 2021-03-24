@@ -4,7 +4,8 @@ author: "Nick Jakuschona – n_jaku01@uni-muenster.de, Tom Niers – tom.niers@u
 date: "24.3.2021"
 output: html_document
 ---
-
+**ERC:** [https://o2r.uni-muenster.de/#/erc/geQfc](https://o2r.uni-muenster.de/#/erc/geQfc) <br>
+**GitHub Repository:** [https://github.com/tnier01/MonitoringDeforestationInLandsatDataCubesUsingNDVI](https://github.com/tnier01/MonitoringDeforestationInLandsatDataCubesUsingNDVI)
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message=FALSE)
 ```
@@ -130,7 +131,7 @@ With this approach, deforestation observations, that we have collected in the pr
 Thus, if the difference between two pixels of two subsequent time steps in the monitoring cube is above a certain quantile of the values of our list, the pixel is considered as deforested.
 Our script is designed in such a way that the specific quantile can be changed and thus the results of the potentially deforested area change accordingly. 
 To make this changeability of our methodology easily applicable and visible to everyone, we are making this research available as an [Executable Research Compendium (ERC)](https://o2r.info/erc-spec/spec/#erc-specification).
-The corresponding ERC can be changed via the *MANIPULATE* menu item.
+The corresponding [ERC](https://o2r.uni-muenster.de/#/erc/geQfc) can be changed via the *MANIPULATE* menu item.
 In this way, the quantile at which a NDVI change is considered deforested can be changed interactively as binding and a map showing the deforested areas will change accordingly. 
 The example given in the ERC also includes a table for evaluation. 
 For the monitoring cube used by us, it is checked whether the detected deforestation has really taken place, i.e. whether it has also been detected by PRODES. 
