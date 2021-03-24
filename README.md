@@ -1,4 +1,4 @@
-# MonitoringDeforestationInLandsatDataCubesUsingNDVI
+# Monitoring Deforestation in Landsat Data Cubes Using NDVI
 
 Deforestation of the rainforest, especially in Brazil, is a recurring topic in science and public. 
 Illegal deforestation is often detected far too late to prevent it.

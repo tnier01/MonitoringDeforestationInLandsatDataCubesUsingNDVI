@@ -184,7 +184,7 @@ changes= unlist(changesLIST)
 hist(changes)
 
 #save changes
-save(changes, file="NDVIchanges.Rdata")
+save(changes, file="data/NDVIchanges.Rdata")
 
 ```
 
